@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How It Works — VeLora</title>
+<meta name="description" content="Tap the card, the review request sends itself. See exactly how VeLora turns one NFC tap into a five-star reply — from setup to the Sentiment Filter to your AI Reply Assistant.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Sora:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<style>
+/* ============================================================
+   VeLora — How It Works (fully self-contained stylesheet)
+
+   This single <style> block replaces the old two-file split
+   (css/style.css + page CSS). It has two parts:
+
+     1. BASE  — design tokens, reset, and the shared components
+                that every VeLora page reuses: header/nav, buttons,
+                eyebrow, section-lead, glow-halo, feature-card,
+                review-tag, final-cta, footer, reveal-on-scroll.
+     2. PAGE  — the How-It-Works-specific layout: hero, phase rail,
+                phase articles, and the time-to-value strip.
+
+   No external stylesheet is required. Only the Google Fonts
+   <link> above stays external, same as before.
+
+   PERF PASS: comments marked "PERF:" flag the targeted changes
+   made to fix scroll stutter — see accompanying report for the
+   full write-up of what changed and why.
+   ============================================================ */
+
+/* ---------- 1. BASE: tokens ---------- */
+:root {
+  /* color */
+  --ink: #1b1720;
+  --ink-2: #241f2b;
+  --paper: #f7f3ea;
+  --paper-2: #efe7d6;
+  --gold: #c9a227;
+  --gold-soft: #e3c569;
+  --glow: rgba(201, 162, 39, 0.35);
+  --text-on-ink: #f5f1ea;
+  --muted-on-ink: #a89fac;
+  --text-on-paper: #1b1720;
+  --muted-on-paper: #5c5560;
+  --border-ink: 1px solid rgba(245, 241, 234, 0.1);
+
+  /* type */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
+
+  /* layout */
+  --max-width: 1180px;
+  --radius-s: 10px;
+  --radius-m: 18px;
+  --radius-l: 40px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---------- 1. BASE: reset ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--text-on-paper);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+p { margin: 0; }
+ol, ul { margin: 0; padding: 0; list-style: none; }
+button { font: inherit; }
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+h1 em, h2 em, h3 em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--gold);
+}
+
+.center { text-align: center; }
+
+::selection { background: var(--gold); color: var(--ink); }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- 1. BASE: skip link ---------- */
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -60px;
+  background: var(--gold);
+  color: var(--ink);
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius-s);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  z-index: 300;
+  transition: top 0.25s var(--ease);
+}
+.skip-link:focus { top: 1rem; }
+
+/* ---------- 1. BASE: header / nav ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(27, 23, 32, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(245, 241, 234, 0.07);
+}
+.header-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 1.1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+.logo { display: inline-flex; align-items: center; text-decoration: none; }
+.logo-word {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--text-on-ink);
+  letter-spacing: 0.01em;
+}
+.logo-word em { font-style: italic; font-weight: 500; color: var(--gold); }
+.logo-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 0.6rem;
+  background: radial-gradient(circle, var(--gold-soft), var(--gold));
+  box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.16);
+  display: inline-block;
+}
+.nav { display: flex; align-items: center; gap: 2.1rem; }
+.nav a {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--muted-on-ink);
+  text-decoration: none;
+  transition: color 0.25s var(--ease);
+}
+.nav a:hover { color: var(--text-on-ink); }
+.header-actions { display: flex; align-items: center; gap: 1.1rem; }
+
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.nav-toggle span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--text-on-ink);
+  transition: transform 0.3s var(--ease), opacity 0.3s var(--ease);
+}
+.nav-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ---------- 1. BASE: buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease),
+              background 0.35s var(--ease), border-color 0.35s var(--ease);
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  color: var(--ink);
+  box-shadow: 0 8px 20px rgba(201, 162, 39, 0.25);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(201, 162, 39, 0.35); }
+.btn-outline {
+  background: transparent;
+  border-color: rgba(245, 241, 234, 0.28);
+  color: var(--text-on-ink);
+}
+.btn-outline:hover { background: rgba(245, 241, 234, 0.08); border-color: rgba(245, 241, 234, 0.5); }
+.btn-small { padding: 0.55rem 1.3rem; font-size: 0.82rem; }
+.btn-lg { padding: 1.05rem 2.5rem; font-size: 1.02rem; }
+
+/* ---------- 1. BASE: eyebrow / section-lead ---------- */
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+.eyebrow.center { justify-content: center; }
+
+.section-lead {
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--muted-on-paper);
+  max-width: 56ch;
+}
+.section-lead.center { margin-left: auto; margin-right: auto; }
+
+/* ---------- 1. BASE: glow halo ---------- */
+/* PERF: blur radius trimmed from 90px to 64px (see mobile query
+   further down for an additional trim on small screens). A large
+   filter: blur() is one of the more expensive things a GPU can be
+   asked to rasterize; the radial-gradient already does most of the
+   softening work, so the filter no longer needs to do as much. */
+.glow-halo {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow), transparent 70%);
+  filter: blur(64px);
+  pointer-events: none;
+  z-index: 0;
+}
+.glow-halo--cta {
+  width: 560px;
+  height: 560px;
+  bottom: -220px;
+  left: 50%;
+  transform: translate3d(-50%, 0, 0);
+}
+
+/* ---------- 1. BASE: feature-card / review-tag ---------- */
+/* PERF: box-shadow used to be listed directly in the transition,
+   which meant every hover forced the browser to repaint a growing
+   shadow region on every frame of the 0.35s animation. It's now a
+   pre-painted ::after layer that only fades its opacity in/out —
+   opacity is compositor-only, so the hover-lift is effectively
+   free no matter how many cards are on screen. contain: layout
+   paint scopes each card's own repaints so they don't get folded
+   into a larger invalidation of the section around them. */
+.feature-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid rgba(27, 23, 32, 0.08);
+  border-radius: var(--radius-m);
+  contain: layout paint;
+  transition: transform 0.35s var(--ease), border-color 0.35s var(--ease);
+}
+.feature-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 16px 32px rgba(27, 23, 32, 0.08);
+  opacity: 0;
+  transition: opacity 0.35s var(--ease);
+  pointer-events: none;
+}
+.feature-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(201, 162, 39, 0.35);
+  will-change: transform;
+}
+.feature-card:hover::after {
+  opacity: 1;
+}
+
+.review-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(201, 162, 39, 0.12);
+  color: var(--gold);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+}
+
+/* ---------- 1. BASE: final CTA + sparkles ---------- */
+.final-cta {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink-2);
+  color: var(--text-on-ink);
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  padding: 6.5rem 2rem 6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.4rem;
+}
+.final-cta h2 { font-size: clamp(2.2rem, 4.5vw, 3.2rem); max-width: 20ch; position: relative; z-index: 1; }
+.final-cta > p { color: var(--muted-on-ink); max-width: 52ch; font-size: 1.05rem; position: relative; z-index: 1; }
+.final-cta .btn-lg { margin-top: 0.6rem; position: relative; z-index: 1; }
+.final-cta .hero-note { margin-top: -0.4rem; position: relative; z-index: 1; }
+
+/* PERF: sparkles and the hero eyebrow-dot used to animate forever,
+   even scrolled far off-screen. They now default to paused and
+   only run while their container is actually in the viewport (see
+   the [data-motion] observer in the JS). prefers-reduced-motion
+   still wins either way via the global rule above. */
+.sparkle {
+  position: absolute;
+  color: var(--gold-soft);
+  opacity: 0.8;
+  pointer-events: none;
+  animation: sparkle-float 4s ease-in-out infinite;
+  animation-play-state: paused;
+}
+[data-motion].in-motion .sparkle {
+  animation-play-state: running;
+}
+.sparkle--1 { top: 14%; left: 12%; font-size: 1.1rem; animation-delay: 0s; }
+.sparkle--2 { top: 22%; right: 14%; font-size: 1.6rem; animation-delay: 1.2s; }
+.sparkle--3 { bottom: 20%; left: 22%; font-size: 1rem; animation-delay: 2.1s; }
+@keyframes sparkle-float {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.45; }
+  50% { transform: translateY(-10px) scale(1.15); opacity: 1; }
+}
+
+/* ---------- 1. BASE: reveal-on-scroll ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+.reveal.in-view { opacity: 1; transform: translateY(0); }
+
+/* ---------- 1. BASE: footer ---------- */
+/* PERF: content-visibility: auto lets the browser skip layout and
+   paint work for the footer until it's about to scroll into view.
+   contain-intrinsic-size gives it a placeholder height up front and
+   then remembers the real rendered height ("auto") after first
+   render, so there's no layout jump. Safe here because nothing in
+   the JS measures or observes the footer. */
+.site-footer {
+  background: var(--ink);
+  color: var(--muted-on-ink);
+  padding: 5rem 2rem 2.4rem;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 700px;
+}
+.footer-top {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 3rem;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid rgba(245, 241, 234, 0.08);
+}
+.footer-brand .logo { margin-bottom: 1rem; }
+.footer-brand p { font-size: 0.9rem; color: var(--muted-on-ink); max-width: 32ch; }
+.footer-heading {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-on-ink);
+  margin-bottom: 1rem;
+  display: block;
+}
+.footer-col { display: flex; flex-direction: column; gap: 0.65rem; }
+.footer-col a { color: var(--muted-on-ink); text-decoration: none; font-size: 0.9rem; transition: color 0.25s var(--ease); }
+.footer-col a:hover { color: var(--gold-soft); }
+.footer-industries {
+  max-width: var(--max-width);
+  margin: 2.4rem auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: rgba(245, 241, 234, 0.4);
+}
+.footer-industries span::after { content: "·"; margin: 0 0.8rem; color: rgba(245, 241, 234, 0.2); }
+.footer-industries span:last-child::after { content: none; }
+.footer-bottom {
+  max-width: var(--max-width);
+  margin: 2.4rem auto 0;
+  padding-top: 1.6rem;
+  border-top: 1px solid rgba(245, 241, 234, 0.08);
+  text-align: center;
+  font-size: 0.8rem;
+  color: rgba(245, 241, 234, 0.4);
+}
+
+/* ---------- 1. BASE: responsive header / footer ---------- */
+@media (max-width: 900px) {
+  .nav-toggle { display: flex; }
+  .nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    max-height: 0;
+    overflow: hidden;
+    background: rgba(27, 23, 32, 0.98);
+    border-bottom: 1px solid rgba(245, 241, 234, 0.07);
+    transition: max-height 0.35s var(--ease), padding 0.35s var(--ease);
+  }
+  .nav.open { max-height: 400px; padding: 0.6rem 2rem 1.4rem; }
+  .nav a { width: 100%; padding: 0.7rem 0; border-bottom: 1px solid rgba(245, 241, 234, 0.05); }
+  .footer-top { grid-template-columns: 1fr 1fr; gap: 2.4rem; }
+}
+@media (max-width: 560px) {
+  .header-inner { padding: 1rem 1.2rem; }
+  .footer-top { grid-template-columns: 1fr; }
+  .footer-industries { font-size: 0.68rem; }
+}
+
+/* ============================================================
+   2. PAGE: How-It-Works specific styles
+   ============================================================ */
+
+/* ---------- Hero ---------- */
+.hiw-hero {
+  position: relative;
+  max-width: 100%;
+  background: var(--ink);
+  color: var(--text-on-ink);
+  overflow: hidden;
+  padding: 6.5rem 2rem 5rem;
+  text-align: center;
+}
+
+.glow-halo--hiw {
+  width: 640px;
+  height: 640px;
+  top: -220px;
+  left: 50%;
+  transform: translate3d(-50%, 0, 0);
+}
+
+.hiw-hero-inner {
+  position: relative;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.hiw-hero-inner h1 {
+  font-size: clamp(2.6rem, 6vw, 4.4rem);
+  margin: 1rem 0 1.3rem;
+}
+
+.hiw-hero-inner .section-lead {
+  color: var(--muted-on-ink);
+}
+
+.hiw-hero .hero-actions { justify-content: center; margin-top: 0.4rem; }
+.hiw-hero .hero-note { margin-top: 1.1rem; }
+
+.hero-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.hero-note { font-size: 0.82rem; color: var(--muted-on-ink); }
+
+.eyebrow-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  margin-right: 8px;
+  animation: blink 1.6s ease-in-out infinite;
+  animation-play-state: paused;
+  vertical-align: middle;
+}
+[data-motion].in-motion .eyebrow-dot {
+  animation-play-state: running;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ---------- Phase rail ---------- */
+.phase-rail {
+  max-width: 100%;
+  padding: 5.5rem 2rem 2rem;
+}
+
+.phase-rail-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 3.5rem;
+  align-items: start;
+}
+
+.phase-nav {
+  position: sticky;
+  top: 110px;
+}
+
+.phase-nav-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-on-paper);
+  margin-bottom: 1.2rem;
+}
+
+.phase-list { position: relative; padding-left: 1.6rem; }
+
+.phase-track {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: rgba(27, 23, 32, 0.1);
+}
+/* PERF: this is the main fix for the reported scroll stutter.
+   The fill used to animate the `height` property, which is a
+   layout-triggering property — and setActive() (below) runs on
+   essentially every scroll pass through the phase rail, so it was
+   forcing a synchronous layout recalculation repeatedly *while the
+   user was scrolling*. It now animates transform: scaleY() from a
+   fixed-height element instead, which is compositor-only (no
+   layout, no paint of the surrounding box). will-change is applied
+   here permanently because this element genuinely re-animates on
+   nearly every scroll pass — a legitimate, ongoing use. */
+.phase-track-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  transform: scaleY(0.06);
+  transform-origin: top;
+  background: var(--gold);
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.6);
+  transition: transform 0.5s var(--ease);
+  will-change: transform;
+}
+
+.phase-list-item {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.7rem 0;
+  cursor: pointer;
+}
+
+.phase-dot {
+  position: absolute;
+  left: -1.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--paper-2);
+  border: 2px solid rgba(27, 23, 32, 0.18);
+  transition: border-color 0.3s var(--ease), background 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.phase-list-num {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted-on-paper);
+  margin-right: 0.6rem;
+  transition: color 0.3s var(--ease);
+}
+
+.phase-list-name {
+  font-size: 0.92rem;
+  color: var(--muted-on-paper);
+  font-weight: 500;
+  transition: color 0.3s var(--ease);
+}
+
+.phase-list-item.is-active .phase-dot {
+  background: var(--gold);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 5px rgba(201, 162, 39, 0.18);
+}
+.phase-list-item.is-active .phase-list-num { color: var(--gold); }
+.phase-list-item.is-active .phase-list-name { color: var(--text-on-paper); font-weight: 600; }
+
+/* ---------- Phase articles ---------- */
+.phase-articles { display: flex; flex-direction: column; gap: 6rem; }
+
+.phase-article-head { margin-bottom: 1.8rem; max-width: 62ch; }
+
+.phase-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.phase-badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  color: var(--ink);
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+
+.phase-duration {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted-on-paper);
+}
+
+.phase-article-head h2 {
+  font-size: clamp(1.8rem, 3.4vw, 2.5rem);
+  margin-bottom: 0.9rem;
+}
+
+.phase-article-head p { color: var(--muted-on-paper); font-size: 1rem; }
+
+.phase-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
+}
+
+/* .phase-step rides on the shared .feature-card recipe above
+   for hover-lift / border / radius consistency. Only the label +
+   tighter padding are added here. */
+.phase-step { padding: 1.5rem 1.5rem 1.6rem; }
+
+.phase-step-num {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.7rem;
+}
+
+.phase-step h3 { font-size: 1.02rem; margin-bottom: 0.5rem; }
+.phase-step p { color: var(--muted-on-paper); font-size: 0.88rem; }
+
+/* ---------- Time to value ---------- */
+.ttv {
+  max-width: 100%;
+  background: var(--ink);
+  color: var(--text-on-ink);
+  padding: 6rem 2rem;
+}
+
+.ttv-inner { max-width: 1040px; margin: 0 auto; }
+.ttv-inner .section-lead.center { color: var(--muted-on-ink); }
+
+.ttv-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.2rem;
+  margin-top: 2.8rem;
+}
+
+.ttv-tile {
+  background: var(--ink-2);
+  border: var(--border-ink);
+  border-radius: var(--radius-m);
+  padding: 1.7rem 1.5rem;
+}
+
+.ttv-time {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--gold-soft);
+  margin-bottom: 0.5rem;
+}
+
+.ttv-title {
+  display: block;
+  font-weight: 600;
+  font-size: 0.98rem;
+  margin-bottom: 0.5rem;
+}
+
+.ttv-tile p { color: var(--muted-on-ink); font-size: 0.85rem; }
+
+/* ---------- Active nav link ---------- */
+.nav a.nav-active {
+  color: var(--text-on-ink);
+  position: relative;
+}
+.nav a.nav-active::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -6px;
+  height: 2px;
+  background: var(--gold);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 980px) {
+  .phase-steps { grid-template-columns: repeat(2, 1fr); }
+  .ttv-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+  .phase-rail-inner { grid-template-columns: 1fr; }
+  .phase-nav {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+    overflow-x: auto;
+    padding-bottom: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .phase-nav-label { display: none; }
+  .phase-track { display: none; }
+  .phase-list {
+    display: flex;
+    gap: 1.6rem;
+    padding-left: 0;
+    flex: 1;
+  }
+  .phase-list-item { padding: 0; flex-shrink: 0; }
+  .phase-dot { position: static; transform: none; margin-right: 0.5rem; }
+  .phase-articles { gap: 4.5rem; }
+}
+
+@media (max-width: 760px) {
+  .hiw-hero { padding: 5rem 1.4rem 3.5rem; }
+  .phase-rail { padding: 3.5rem 1.4rem 1rem; }
+  .phase-steps { grid-template-columns: 1fr; }
+  .ttv { padding: 4rem 1.4rem; }
+  .ttv-grid { grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .ttv-time { font-size: 1.6rem; }
+  .final-cta { border-radius: 24px 24px 0 0; padding: 5rem 1.4rem 4.5rem; }
+}
+
+/* PERF: lower-end phones pay proportionally more for backdrop-filter
+   and large filter: blur() — both are GPU rasterization work, and
+   mobile GPUs have far less headroom than desktop. Trimming the
+   radii here keeps the same visual language (frosted header, soft
+   glow) at a fraction of the cost on the devices that need it most. */
+@media (max-width: 600px) {
+  .glow-halo { filter: blur(48px); }
+  .site-header {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+@media (max-width: 480px) {
+  .ttv-grid { grid-template-columns: 1fr; }
+}
+</style>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header" id="top">
+  <div class="header-inner">
+    <a href="index.html" class="logo" aria-label="VeLora home">
+      <span class="logo-word">Ve<em>Lora</em></span>
+    </a>
+
+    <nav class="nav" id="primaryNav">
+      <a href="features.html">Features</a>
+      <a href="pricing.html">Pricing</a>
+      <a href="how-it-works.html" class="nav-active" aria-current="page">How-It-Works</a>
+      <a href="industries.html">Industries</a>
+      <a href="demo.html">Live Demo</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+
+    <div class="header-actions">
+      <a class="btn btn-primary btn-small" href="index.html#pricing">Order Now</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="primaryNav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="hiw-hero">
+    <div class="glow-halo glow-halo--hiw" aria-hidden="true"></div>
+    <div class="hiw-hero-inner" data-motion>
+      <p class="eyebrow center reveal"><span class="eyebrow-dot" aria-hidden="true"></span>How It Works</p>
+      <h1 class="center reveal">Tap once. <em>Never chase</em><br>a review again.</h1>
+      <p class="section-lead center reveal">Five phases. You're hands-on for exactly one of them. Here's what happens between a customer's tap and a five-star reply landing in their feed.</p>
+      <div class="hero-actions center reveal">
+        <a class="btn btn-primary" href="index.html#pricing">Start Free Trial</a>
+        <a class="btn btn-outline" href="demo.html">Watch 2-Min Demo</a>
+      </div>
+      <p class="hero-note center reveal">14-day free trial · No app required</p>
+    </div>
+  </section>
+
+  <!-- PHASE RAIL -->
+  <section class="phase-rail" aria-label="The five phases of VeLora">
+    <div class="phase-rail-inner">
+
+      <aside class="phase-nav">
+        <p class="phase-nav-label">The 5 phases</p>
+        <ol class="phase-list" id="phaseList">
+          <li class="phase-list-item is-active" data-phase="1">
+            <span class="phase-dot"></span>
+            <span class="phase-list-num">01</span>
+            <span class="phase-list-name">Setup</span>
+          </li>
+          <li class="phase-list-item" data-phase="2">
+            <span class="phase-dot"></span>
+            <span class="phase-list-num">02</span>
+            <span class="phase-list-name">Tap</span>
+          </li>
+          <li class="phase-list-item" data-phase="3">
+            <span class="phase-dot"></span>
+            <span class="phase-list-num">03</span>
+            <span class="phase-list-name">Filter</span>
+          </li>
+          <li class="phase-list-item" data-phase="4">
+            <span class="phase-dot"></span>
+            <span class="phase-list-num">04</span>
+            <span class="phase-list-name">Reply</span>
+          </li>
+          <li class="phase-list-item" data-phase="5">
+            <span class="phase-dot"></span>
+            <span class="phase-list-num">05</span>
+            <span class="phase-list-name">Grow</span>
+          </li>
+        </ol>
+        <div class="phase-track" aria-hidden="true">
+          <div class="phase-track-fill" id="phaseTrackFill"></div>
+        </div>
+      </aside>
+
+      <div class="phase-articles" id="phaseArticles">
+
+        <!-- PHASE 1 -->
+        <article class="phase-article reveal" data-phase="1">
+          <header class="phase-article-head">
+            <div class="phase-meta">
+              <span class="phase-badge">01 · Setup · Once</span>
+              <span class="phase-duration">~10 minutes</span>
+            </div>
+            <h2>Program the card. Never touch it again.</h2>
+            <p>Your VeLora Card arrives ready to pair. Tap it to your own phone once to link it to your account, connect your Google Business Profile, and choose exactly where every future tap should lead.</p>
+          </header>
+          <div class="phase-steps">
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 1</span>
+              <h3>Pair your card</h3>
+              <p>One tap on your own phone links the chip to your VeLora account — no app, no serial number to type in.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 2</span>
+              <h3>Connect your platforms</h3>
+              <p>Google, Yelp, Facebook, and 17+ other listing sites get claimed through a single one-click login.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 3</span>
+              <h3>Choose the destination</h3>
+              <p>Pick what a tap opens — review prompt, booking calendar, or contact card — and change it anytime from your dashboard.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- PHASE 2 -->
+        <article class="phase-article reveal" data-phase="2">
+          <header class="phase-article-head">
+            <div class="phase-meta">
+              <span class="phase-badge">02 · Tap · Every visit</span>
+              <span class="phase-duration">~3 seconds a tap</span>
+            </div>
+            <h2>Hand it over. The rest happens in their pocket.</h2>
+            <p>Set the card by the register, clip it to a lanyard, or hand it across the table at the end of a job. One tap wakes the customer's own phone and opens your review page before they've even sat back down.</p>
+          </header>
+          <div class="phase-steps">
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 1</span>
+              <h3>Card meets phone</h3>
+              <p>The NFC chip fires a native prompt on iOS and Android alike; a printed QR code on the card covers anyone with NFC switched off.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 2</span>
+              <h3>Page opens instantly</h3>
+              <p>Your branded VeloraLink loads in under a second, already carrying your logo, colors, and name.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 3</span>
+              <h3>One tap to rate</h3>
+              <p>No login, no typing, no app download — just a star tap on a screen they already trust.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- PHASE 3 -->
+        <article class="phase-article reveal" data-phase="3">
+          <header class="phase-article-head">
+            <div class="phase-meta">
+              <span class="phase-badge">03 · Filter · Every rating</span>
+              <span class="phase-duration">Automatic</span>
+            </div>
+            <h2>The Sentiment Filter reads the room first.</h2>
+            <p>A five-star tap and a two-star tap shouldn't travel the same road. VeLora reads the rating before anything goes public, so happy customers boost your listings and frustrated ones reach you privately instead.</p>
+          </header>
+          <div class="phase-steps">
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 1</span>
+              <h3>4–5★ heads public</h3>
+              <p>Routed straight to whichever platform — Google, Yelp, Facebook — needs the boost most that week.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 2</span>
+              <h3>1–3★ stays private</h3>
+              <p>A short "tell us what happened" form lands in your inbox, not on the internet.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 3</span>
+              <h3>You get the first word</h3>
+              <p>Reach out and make it right before a rough visit ever becomes a public review.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- PHASE 4 -->
+        <article class="phase-article reveal" data-phase="4">
+          <header class="phase-article-head">
+            <div class="phase-meta">
+              <span class="phase-badge">04 · Reply · Every day</span>
+              <span class="phase-duration">~2 minutes a day</span>
+            </div>
+            <h2>AI drafts the reply. You just tap approve.</h2>
+            <p>Every new review — glowing or gutting — lands in one inbox with a reply already written in your voice. Skim it, edit a line if you want, and publish. Five-star thank-yous can even post themselves.</p>
+          </header>
+          <div class="phase-steps">
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 1</span>
+              <h3>AI reads and drafts</h3>
+              <p>A reply matched to your tone, referencing what the customer actually said.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 2</span>
+              <h3>You approve or edit</h3>
+              <p>One tap to publish, or rewrite it in seconds — your call, every time.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 3</span>
+              <h3>It posts everywhere</h3>
+              <p>Straight to Google, Yelp, or Facebook, logged in one timeline with your response time attached.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- PHASE 5 -->
+        <article class="phase-article reveal" data-phase="5">
+          <header class="phase-article-head">
+            <div class="phase-meta">
+              <span class="phase-badge">05 · Grow · Every week</span>
+              <span class="phase-duration">Compounds on its own</span>
+            </div>
+            <h2>Every tap makes the next one work harder.</h2>
+            <p>Your best reviews don't just sit on Google — they show up on your website and your socials automatically, and your dashboard shows exactly which taps, staff, or locations are driving the growth.</p>
+          </header>
+          <div class="phase-steps">
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 1</span>
+              <h3>Your site updates itself</h3>
+              <p>Top reviews appear as a widget on your homepage — no designer, no code, no waiting.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 2</span>
+              <h3>Socials post automatically</h3>
+              <p>A glowing review becomes an on-brand Instagram or Facebook post without you lifting a finger.</p>
+            </div>
+            <div class="feature-card phase-step">
+              <span class="phase-step-num">Step 3</span>
+              <h3>The numbers tell the story</h3>
+              <p>Track tap volume, star trends, and ranking lift by week, staff member, or location.</p>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- TIME TO VALUE -->
+  <section class="ttv">
+    <div class="ttv-inner">
+      <p class="eyebrow center reveal">Time To Value</p>
+      <h2 class="center reveal">From first tap to first review — <em>same day.</em></h2>
+      <p class="section-lead center reveal">No onboarding call, no waiting on a developer. Here's a typical timeline once the card is in someone's hand.</p>
+
+      <div class="ttv-grid reveal">
+        <div class="ttv-tile">
+          <span class="ttv-time">0:00</span>
+          <span class="ttv-title">Card tapped</span>
+          <p>Customer's own phone opens your review page automatically.</p>
+        </div>
+        <div class="ttv-tile">
+          <span class="ttv-time">0:02</span>
+          <span class="ttv-title">Rating given</span>
+          <p>One tap, no typing — most customers finish in under five seconds.</p>
+        </div>
+        <div class="ttv-tile">
+          <span class="ttv-time">0:05</span>
+          <span class="ttv-title">Reply drafted</span>
+          <p>AI writes a thank-you before you've even seen the notification.</p>
+        </div>
+        <div class="ttv-tile">
+          <span class="ttv-time">0:09</span>
+          <span class="ttv-title">Review live</span>
+          <p>Public, replied to, and already feeding your website widget.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section id="demo" class="final-cta" data-motion>
+    <div class="glow-halo glow-halo--cta" aria-hidden="true"></div>
+    <span class="sparkle sparkle--1" aria-hidden="true">✦</span>
+    <span class="sparkle sparkle--2" aria-hidden="true">✧</span>
+    <span class="sparkle sparkle--3" aria-hidden="true">✦</span>
+
+    <h2 class="reveal">Ready to stop <em>chasing</em> reviews?</h2>
+    <p class="reveal">Start your 14-day trial now. Connect Google, pair your card, and send your first tap in under 10 minutes. Watch new five-star reviews land in your dashboard — starting the same day.</p>
+    <a class="btn btn-primary btn-lg reveal" href="index.html#pricing">Start Your Free Trial</a>
+    <p class="hero-note reveal">14-day free trial · Cancel anytime</p>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-brand">
+      <a href="index.html" class="logo" aria-label="VeLora home">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span class="logo-word">Ve<em>Lora</em></span>
+      </a>
+      <p>Reviews that build themselves. Reputation that never sleeps.</p>
+    </div>
+
+    <div class="footer-col">
+      <p class="footer-heading">Product</p>
+      <a href="features.html">Features</a>
+      <a href="pricing.html">Pricing</a>
+      <a href="how-it-works.html">How It Works</a>
+      <a href="demo.html">Live Demo</a>
+    </div>
+
+    <div class="footer-col">
+      <p class="footer-heading">Company</p>
+      <a href="index.html">About</a>
+      <a href="index.html">Blog</a>
+      <a href="index.html">Careers</a>
+      <a href="index.html">Privacy Policy</a>
+      <a href="index.html">Terms of Service</a>
+    </div>
+
+    <div class="footer-col">
+      <p class="footer-heading">Support</p>
+      <a href="faq.html">FAQ</a>
+      <a href="index.html">Contact Us</a>
+      <a href="index.html">Help Center</a>
+    </div>
+  </div>
+
+  <div class="footer-industries">
+    <span>Restaurants</span><span>Cafes</span><span>Bars</span><span>Hotels</span>
+    <span>Vacation Rentals</span><span>B&amp;Bs</span><span>Real Estate</span><span>Auto Dealerships</span>
+    <span>Auto Repair</span><span>Doctors</span><span>Dentists</span><span>Medical Practices</span>
+    <span>Gyms</span><span>Hair Salons</span><span>Spas</span><span>Plumbers</span>
+    <span>Contractors</span><span>Home Services</span><span>Law Firms</span><span>Accountants</span>
+  </div>
+
+  <div class="footer-bottom">
+    <p>© <span id="year"></span> VeLora. Reviews that build themselves. Reputation that never sleeps.</p>
+  </div>
+</footer>
+<script>
+// VeLora — How It Works page behavior
+// Self-contained: mobile nav toggle, footer year, reveal-on-scroll,
+// off-screen animation pausing, and the phase-rail scroll-spy.
+// Safe to drop on its own; doesn't assume any other script has
+// already run on the page.
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  /* ---- Footer year ---- */
+  const yearEl = document.getElementById('year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  /* ---- Mobile nav toggle ---- */
+  const navToggle = document.getElementById('navToggle');
+  const primaryNav = document.getElementById('primaryNav');
+  if (navToggle && primaryNav) {
+    navToggle.addEventListener('click', () => {
+      const isOpen = navToggle.getAttribute('aria-expanded') === 'true';
+      navToggle.setAttribute('aria-expanded', String(!isOpen));
+      primaryNav.classList.toggle('open', !isOpen);
+    });
+  }
+
+  /* ---- Reveal-on-scroll ----
+     will-change is added right before the transition starts and
+     removed once it finishes, so the browser only keeps a
+     composited layer around for the ~0.7s the animation actually
+     runs, instead of promoting every .reveal element for the
+     lifetime of the page. */
+  const revealEls = document.querySelectorAll('.reveal');
+  if (revealEls.length) {
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          el.style.willChange = 'opacity, transform';
+          el.classList.add('in-view');
+          revealObserver.unobserve(el);
+          el.addEventListener('transitionend', () => {
+            el.style.willChange = 'auto';
+          }, { once: true });
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+    revealEls.forEach((el) => revealObserver.observe(el));
+  }
+
+  /* ---- Pause decorative animations while off-screen ----
+     The hero's blinking dot and the final-CTA sparkles used to
+     animate continuously for as long as the page was open, even
+     while scrolled far away from them. One shared observer toggles
+     a class that gates animation-play-state in CSS, so they only
+     run while their container is actually on screen. */
+  const motionEls = document.querySelectorAll('[data-motion]');
+  if (motionEls.length) {
+    const motionObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        entry.target.classList.toggle('in-motion', entry.isIntersecting);
+      });
+    }, { threshold: 0 });
+
+    motionEls.forEach((el) => motionObserver.observe(el));
+  }
+
+  /* ---- Phase-rail scroll-spy ---- */
+  const phaseArticles = Array.from(document.querySelectorAll('.phase-article'));
+  const phaseListItems = Array.from(document.querySelectorAll('.phase-list-item'));
+  const trackFill = document.getElementById('phaseTrackFill');
+
+  if (phaseArticles.length && phaseListItems.length) {
+    const setActive = (phaseNum) => {
+      phaseListItems.forEach((item) => {
+        item.classList.toggle('is-active', item.dataset.phase === phaseNum);
+      });
+      const index = phaseListItems.findIndex((item) => item.dataset.phase === phaseNum);
+      if (trackFill && index > -1) {
+        const pct = phaseListItems.length > 1
+          ? (index / (phaseListItems.length - 1)) * 100
+          : 100;
+        // PERF: transform: scaleY() instead of height. This runs on
+        // nearly every scroll pass through the rail, so keeping it
+        // off the layout-triggering `height` property is what
+        // removes the scroll stutter here.
+        const scale = Math.max(pct, 6) / 100;
+        trackFill.style.transform = `scaleY(${scale})`;
+      }
+    };
+
+    const phaseObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) setActive(entry.target.dataset.phase);
+      });
+    }, { rootMargin: '-40% 0px -50% 0px', threshold: 0 });
+
+    phaseArticles.forEach((el) => phaseObserver.observe(el));
+
+    // Clicking a phase in the sidebar jumps to that section.
+    phaseListItems.forEach((item) => {
+      item.addEventListener('click', () => {
+        const target = document.querySelector(
+          `.phase-article[data-phase="${item.dataset.phase}"]`
+        );
+        if (target) {
+          const y = target.getBoundingClientRect().top + window.scrollY - 100;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      });
+    });
+
+    setActive('1');
+  }
+});
+</script>
+</body>
+</html>
